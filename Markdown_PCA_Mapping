@@ -1,0 +1,588 @@
+---
+title: "Principal Component Analysis Mapping"
+
+output:
+  html_document:
+    self_contained: true
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+    echo = FALSE,
+    message = FALSE,
+    warning = FALSE,
+    fig.width = 10,
+    fig.height = 8
+)
+suppressWarnings({
+  suppressMessages({
+
+
+    
+    })})
+library(ggplot2)
+library(plotly)
+library(gridExtra)
+library(grid)
+library(dplyr)
+library(tidyr)
+library(htmltools)
+library(markdown)
+library(scales)
+#knitr::opts_chunk$set(dev = "png")
+setwd("C:/Users/mollear/Desktop/Test")
+db<-read.csv("IBA.csv")
+DSCC<-read.csv("DSCC_CM-.csv")
+SCS<-read.csv("CM_1100-.csv")
+PROT<-read.csv("CM_1099-.csv")
+FAT<-read.csv("CM_1098-.csv")
+A30<-read.csv("CM_1015-.csv")
+TS<-read.csv("CM_1029-.csv")
+RCT<-read.csv("CM_1012-.csv")
+K20<-read.csv("CM_1014-.csv")
+Lactose<-read.csv("CM_1007-.csv")
+Casein<-read.csv("CM_1006-.csv")
+TBC<-read.csv("CM_1008-.csv")
+IAC<-read.csv("CM_1002-.csv")
+
+#province_lookup <- read.csv("italy_province_lookup.csv")
+  #####################################################################################
+  
+  # Create a lookup table for region to sigla conversion
+province_lookup_ai <- data.frame(
+  region = c(
+    "Agrigento", "AG",
+    "Alessandria", "AL",
+    "Ancona", "AN",
+    "Aosta", "AO",
+    "L'Aquila", "AQ",
+    "Arezzo", "AR",
+    "Ascoli Piceno", "AP",
+    "Asti", "AT",
+    "Avellino", "AV",
+    "Bari", "BA",
+    "Bergamo", "BG",
+    "Biella", "BI",
+    "Belluno", "BL",
+    "Benevento", "BN",
+    "Bologna", "BO",
+    "Brindisi", "BR",
+    "Brescia", "BS",
+    "Barletta-Andria-Trani", "BT",
+    "Bolzano-Bozen", "BZ",
+    "Cagliari", "CA",
+    "Campobasso", "CB",
+    "Caserta", "CE",
+    "Chieti", "CH",
+    "Caltanissetta", "CL",
+    "Cuneo", "CN",
+    "Como", "CO",
+    "Cremona", "CR",
+    "Cosenza", "CS",
+    "Catania", "CT",
+    "Catanzaro", "CZ",
+    "Enna", "EN",
+    "Forlì-Cesena", "FC§FO",
+    "Ferrara", "FE",
+    "Foggia", "FG",
+    "Firenze", "FI",
+    "Frosinone", "FR",
+    "Genova", "GE",
+    "Gorizia", "GO",
+    "Grosseto", "GR",
+    "Imperia", "IM",
+    "Isernia", "IS",
+    "Crotone", "KR",
+    "Lecco", "LC",
+    "Lecce", "LE",
+    "Livorno", "LI",
+    "Lodi", "LO",
+    "Latina", "LT",
+    "Lucca", "LU",
+    "Monza e Brianza", "MB",
+    "Macerata", "MC",
+    "Messina", "ME",
+    "Milano", "MI",
+    "Mantova", "MN",
+    "Modena", "MO",
+    "Massa-Carrara", "MS",
+    "Matera", "MT",
+    "Napoli", "NA",
+    "Novara", "NO",
+    "Nuoro", "NU",
+    "Oristano", "OR",
+    "Palermo", "PA",
+    "Piacenza", "PC",
+    "Padova", "PD",
+    "Pescara", "PE",
+    "Perugia", "PG",
+    "Pisa", "PI",
+    "Pordenone", "PN",
+    "Parma", "PR",
+    "Pistoia", "PT",
+    "Pesaro e Urbino", "PU§PS",
+    "Pavia", "PV",
+    "Potenza", "PZ",
+    "Ravenna", "RA",
+    "Reggio Calabria", "RC",
+    "Reggio Emilia", "RE",
+    "Ragusa", "RG",
+    "Rieti", "RI",
+    "Roma", "RM",
+    "Rimini", "RN",
+    "Rovigo", "RO",
+    "Salerno", "SA",
+    "Siena", "SI",
+    "Sondrio", "SO",
+    "La Spezia", "SP",
+    "Siracusa", "SR",
+    "Sassari", "SS",
+    "Sud Sardegna", "SU",
+    "Savona", "SV",
+    "Taranto", "TA",
+    "Teramo", "TE",
+    "Trento", "TN",
+    "Torino", "TO",
+    "Trapani", "TP",
+    "Terni", "TR",
+    "Trieste", "TS",
+    "Treviso", "TV",
+    "Udine", "UD",
+    "Varese", "VA",
+    "Verbano-Cusio-Ossola", "VB",
+    "Vercelli", "VC",
+    "Venezia", "VE",
+    "Vicenza", "VI",
+    "Verona", "VR",
+    "Viterbo", "VT",
+    "Vibo Valentia", "VV"
+  ),
+  stringsAsFactors = FALSE
+)
+
+# Reshape the data into a proper two-column dataframe
+province_lookup_ai <- data.frame(
+  region = province_lookup_ai$region[seq(1, length(province_lookup_ai$region), 2)],
+  sigla = province_lookup_ai$region[seq(2, length(province_lookup_ai$region), 2)],
+  stringsAsFactors = FALSE
+)
+# Check if parameters are provided
+
+```
+```{r start, include=FALSE}
+dataset_names <- c("DSCC", "SCS", "PROT", "FAT", "A30", "TS", "RCT", "K20", "Lactose", "Casein", "TBC", "IAC")
+datasets <- list(DSCC, SCS, PROT, FAT, A30, TS, RCT, K20, Lactose, Casein, TBC, IAC)
+names(datasets) <- dataset_names
+
+all_additional_data <- bind_rows(datasets, .id = "dataset")
+
+all_additional_data$nomeMisura <- ifelse(!is.na(all_additional_data$CelluleSomaticheDifferenzialiDscc), "DSCC",all_additional_data$nomeMisura)
+all_additional_data$valoreMisura <- ifelse(!is.na(all_additional_data$CelluleSomaticheDifferenzialiDscc), all_additional_data$CelluleSomaticheDifferenzialiDscc,all_additional_data$valoreMisura )
+all_additional_data$siglaProvincia <- ifelse(is.na(all_additional_data$siglaProvincia), "NA",all_additional_data$siglaProvincia)
+#str(all_additional_data )
+id_lists <- lapply(datasets, function(df) unique(df$idLuogo))
+mese_lists <- lapply(datasets, function(df) unique(df$mese))
+anno_lists <- lapply(datasets, function(df) unique(df$anno))
+provincia_lists <- lapply(datasets, function(df) unique(df$siglaProvincia))
+
+
+
+
+```
+
+
+
+
+```{r echo=FALSE, results='asis'}
+# Assuming your data loading code is already run and all_additional_data is available
+
+months <- as.numeric(unique(all_additional_data$mese))
+
+# Create an empty tagList
+  l <- htmltools::tagList()
+#k <- htmltools::tagList()
+
+
+
+# Generate and store all plots
+for(i in seq_along(months)) {
+m<-list()
+v<-list()
+  # Filter data for specific month
+  target_month <- months[i]
+  
+  #target_month <-5
+  
+  
+  #length(unique(all_additional_data$siglaProvincia))
+# unique(month_data$siglaProvincia)
+ # unique_all_additional <- unique(all_additional_data$siglaProvincia)
+#unique_month <- unique(month_data$siglaProvincia)
+
+# Find differences
+#diff_in_all_additional <- setdiff(unique_all_additional, unique_month)
+
+#da <- all_additional_data %>%
+    #filter(siglaProvincia %in% diff_in_all_additional)
+
+ #unique(avg_data$siglaProvincia)->avg_mese
+ 
+  
+  month_data <- all_additional_data %>% 
+    filter(mese == target_month)
+  
+  # Average all available data points across provincia
+  avg_data <- month_data %>%
+    group_by(siglaProvincia, nomeMisura) %>%
+    summarise(avg_valoreMisura = mean(valoreMisura, na.rm = TRUE), .groups = 'drop') %>%
+    pivot_wider(names_from = nomeMisura, values_from = avg_valoreMisura, values_fill = NA)
+  
+  # Prepare data for PCA
+  data_pca <- avg_data[,-1]
+  
+  # Impute missing values
+  data_pca_imputed <- missMDA::imputePCA(data_pca, ncp = min(ncol(data_pca) - 1, nrow(data_pca) - 1))
+  
+  # Perform PCA
+  pca_score <- prcomp(data_pca_imputed$completeObs, center = TRUE, scale. = TRUE)
+  
+  # Create data frame with PCA scores
+  pca_data <- data.frame(
+    siglaProvincia = avg_data$siglaProvincia,
+    PC1 = pca_score$x[, 1],
+    PC2 = pca_score$x[, 2],
+    PC3 = pca_score$x[, 3]
+  )
+  
+  # Calculate explained variance
+  var_explained <- pca_score$sdev^2 / sum(pca_score$sdev^2)
+  var_explained_pct <- round(var_explained * 100, 1)
+  
+  # Create labels
+  PCA <- paste0("PC1: ", var_explained_pct[1], "%")
+  PCB <- paste0("PC2: ", var_explained_pct[2], "%")
+  PCC <- paste0("PC3: ", var_explained_pct[3], "%")
+  
+  # 2D Score Plot
+  plot1 <- ggplot(pca_data, aes(x = PC1, y = PC2, color = siglaProvincia)) +
+    geom_point(size = 3, alpha = 0.6) +
+    labs(x = PCA, y = PCB) +
+    stat_ellipse(aes(group = siglaProvincia), level = 0.95, linewidth = 1) +
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.title.x = element_text(size = 14),
+      axis.title.y = element_text(size = 14),
+      legend.position = "right"
+    )
+  
+  # 3D Score Plot
+  plot3d <- plot_ly(pca_data, x = ~PC1, y = ~PC2, z = ~PC3,
+                    color = ~siglaProvincia,
+                    text = ~paste("Province:", siglaProvincia),
+                    type = "scatter3d", mode = "markers",
+                    marker = list(size = 4)) %>%
+    layout(scene = list(
+      xaxis = list(title = PCA),
+      yaxis = list(title = PCB),
+      zaxis = list(title = PCC)
+    ),
+    title = paste("PCA Scores - Month n°", target_month))
+  
+  # Loadings Plot
+  loadings <- as.data.frame(pca_score$rotation[, 1:3])
+  loadings$variable <- rownames(loadings)
+  
+  loadings_plot_3D <- plot_ly(loadings, x = ~PC1, y = ~PC2, z = ~PC3,
+                              text = ~variable,
+                              type = "scatter3d", mode = "markers+text",
+                              marker = list(size = 4)) %>%
+    layout(scene = list(
+      xaxis = list(title = PCA),
+      yaxis = list(title = PCB),
+      zaxis = list(title = PCC)
+    ),
+    title = paste("PCA Loadings Month n°", target_month))
+  
+  l[[2*i - 1]] <- tagList(HTML(markdown::mark(text=paste0("\n\n#### ", i, "\n"))), plot3d)
+  l[[2*i]] <- tagList(HTML(markdown::mark(text=paste0("\n\n#### ", i, "\n"))), loadings_plot_3D)
+  c("PC1", "PC2", "PC3")->PCS
+  
+  
+  
+   italy_map <- map_data("italy")
+
+#unique(pca_data$siglaProvincia)->b
+#unique(province_lookup_ai$sigla)->a
+#diff <- setdiff(a,b)
+#diffb <- setdiff(b,a)
+
+# Use this to join your data
+italy_data <- italy_map %>%
+  left_join(province_lookup_ai, by = "region") %>%  # Get sigla for map regions
+  left_join(pca_data, by = c("sigla" = "siglaProvincia"))  # Join with your PCA data
+  unique(italy_data$sigla)->c
+  for (pc in PCS) {
+    map_title <- paste(pc, "Scores")
+   # map_plot <- create_italy_map(pca_data, pc, map_title)
+
+    o <- which(PCS == pc)
+pc_column <- paste0("PC", o)
+
+  map_plot<-ggplot(italy_data, aes_string(x = "long", y = "lat", group = "group", fill = pc_column)) +
+    geom_polygon(color = "black") +
+    scale_fill_viridis_c(option = "plasma", na.value = "grey90") +
+    coord_map() +
+    theme_minimal() +
+    labs(title = map_title, 
+         fill = "Score") +
+    theme(legend.position = "right",
+          axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+    m[[length(m) + 1]] <-  map_plot
+    #print(map_plot)
+    
+    
+  }
+cat(paste("<h2>Geographical Distribution of PC Scores - Month", target_month, "</h2>"), "\n")
+  grid.arrange(grobs = m, ncol = 3)
+italy_data$PC1_norm <- rescale(italy_data$PC1, to = c(0, 1))
+italy_data$PC2_norm <- rescale(italy_data$PC2, to = c(0, 1))
+italy_data$PC3_norm <- rescale(italy_data$PC3, to = c(0, 1))
+
+# Replace NA values with 0 after scaling
+italy_data$PC1_norm[is.na(italy_data$PC1_norm)] <- 0
+italy_data$PC2_norm[is.na(italy_data$PC2_norm)] <- 0
+italy_data$PC3_norm[is.na(italy_data$PC3_norm)] <- 0
+
+# Create an RGB color
+italy_data$color <- rgb(italy_data$PC1_norm, italy_data$PC2_norm, italy_data$PC3_norm)
+
+italy_data$color[is.na(italy_data$PC1) | is.na(italy_data$PC2) | is.na(italy_data$PC3)] <- "#FFFFFF"
+map_title_rgb <- paste("Geographical Distribution of PC Scores as RGB Colors  - Month", target_month)
+# Plot the map
+rgb_map<-ggplot(italy_data, aes(x = long, y = lat, group = group, fill = color)) +
+    geom_polygon(color = "black") +
+    scale_fill_identity() +
+    coord_map() +
+    theme_minimal() +
+    labs(title = map_title_rgb, 
+         fill = "RGB Color") +
+    theme(legend.position = "right",
+          axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+rgb_map->v[[length(v) + 1]] 
+print(rgb_map)
+#l
+#m
+#v
+
+}
+
+# Display the plots for the first month as an example
+#l[[1]]
+#k[[2]]
+#k[2]
+#m[[9]]
+## Generate Plots for Each Month
+  # for rescale function
+
+# Normalize the PC scores between 0 and 1
+
+
+```
+
+
+
+
+## Principal Component Analysis Across all data
+
+```{r all data, echo=FALSE, results='asis'}
+
+
+m<-list()
+l <- htmltools::tagList()
+ 
+  
+  month_data <- all_additional_data 
+  
+  # Average all available data points across provincia
+  avg_data <- month_data %>%
+    group_by(siglaProvincia, nomeMisura) %>%
+    summarise(avg_valoreMisura = mean(valoreMisura, na.rm = TRUE), .groups = 'drop') %>%
+    pivot_wider(names_from = nomeMisura, values_from = avg_valoreMisura, values_fill = NA)
+  
+  # Prepare data for PCA
+  data_pca <- avg_data[,-1]
+  
+  # Impute missing values
+  data_pca_imputed <- missMDA::imputePCA(data_pca, ncp = min(ncol(data_pca) - 1, nrow(data_pca) - 1))
+  
+  # Perform PCA
+  pca_score <- prcomp(data_pca_imputed$completeObs, center = TRUE, scale. = TRUE)
+  
+  # Create data frame with PCA scores
+  pca_data <- data.frame(
+    siglaProvincia = avg_data$siglaProvincia,
+    PC1 = pca_score$x[, 1],
+    PC2 = pca_score$x[, 2],
+    PC3 = pca_score$x[, 3]
+  )
+  
+  # Calculate explained variance
+  var_explained <- pca_score$sdev^2 / sum(pca_score$sdev^2)
+  var_explained_pct <- round(var_explained * 100, 1)
+  
+  # Create labels
+  PCA <- paste0("PC1: ", var_explained_pct[1], "%")
+  PCB <- paste0("PC2: ", var_explained_pct[2], "%")
+  PCC <- paste0("PC3: ", var_explained_pct[3], "%")
+  ######################################################################
+  
+   plot1 <- ggplot(pca_data, aes(x = PC1, y = PC2, color = siglaProvincia)) +
+    geom_point(size = 3, alpha = 0.6) +
+    labs(x = PCA, y = PCB) +
+    stat_ellipse(aes(group = siglaProvincia), level = 0.95, linewidth = 1) +
+    theme_minimal() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.title.x = element_text(size = 14),
+      axis.title.y = element_text(size = 14),
+      legend.position = "right"
+    )
+  
+  # 3D Score Plot
+  plot3d <- plot_ly(pca_data, x = ~PC1, y = ~PC2, z = ~PC3,
+                    color = ~siglaProvincia,
+                    text = ~paste("Province:", siglaProvincia),
+                    type = "scatter3d", mode = "markers",
+                    marker = list(size = 4)) %>%
+    layout(scene = list(
+      xaxis = list(title = PCA),
+      yaxis = list(title = PCB),
+      zaxis = list(title = PCC)
+    ),
+    title = paste("PCA Scores - All data"))
+  
+  # Loadings Plot
+  loadings <- as.data.frame(pca_score$rotation[, 1:3])
+  loadings$variable <- rownames(loadings)
+  
+  loadings_plot_3D <- plot_ly(loadings, x = ~PC1, y = ~PC2, z = ~PC3,
+                              text = ~variable,
+                              type = "scatter3d", mode = "markers+text",
+                              marker = list(size = 4)) %>%
+    layout(scene = list(
+      xaxis = list(title = PCA),
+      yaxis = list(title = PCB),
+      zaxis = list(title = PCC)
+    ),
+    title = paste("PCA Loadings - All data"))
+  
+  l[[1]] <- tagList(HTML(markdown::mark(text=paste0("\n\n#### ", "", "\n"))), plot3d)
+  l[[2]] <- tagList(HTML(markdown::mark(text=paste0("\n\n#### ", "", "\n"))), loadings_plot_3D)
+  
+  ###################
+  
+  
+  
+  
+  # 2D Score Plot
+  
+  c("PC1", "PC2", "PC3")->PCS
+
+   italy_map <- map_data("italy")
+
+# Use this to join your data
+italy_data <- italy_map %>%
+  left_join(province_lookup_ai, by = "region") %>%  # Get sigla for map regions
+  left_join(pca_data, by = c("sigla" = "siglaProvincia"))  # Join with your PCA data
+  unique(italy_data$sigla)->c
+  for (pc in PCS) {
+    map_title <- paste(pc, "Scores")
+   # map_plot <- create_italy_map(pca_data, pc, map_title)
+
+    o <- which(PCS == pc)
+pc_column <- paste0("PC", o)
+
+  map_plot<-ggplot(italy_data, aes_string(x = "long", y = "lat", group = "group", fill = pc_column)) +
+    geom_polygon(color = "black") +
+    scale_fill_viridis_c(option = "plasma", na.value = "grey90") +
+    coord_map() +
+    theme_minimal() +
+    labs(title = map_title, 
+         fill = "Score") +
+    theme(legend.position = "right",
+          axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+    m[[length(m) + 1]] <-  map_plot
+    #print(map_plot)
+    
+    
+  }
+  cat(paste("<h2>Geographical Distribution of PC Scores -All data</h2>"), "\n")
+  grid.arrange(grobs = m, ncol = 3)
+italy_data$PC1_norm <- rescale(italy_data$PC1, to = c(0, 1))
+italy_data$PC2_norm <- rescale(italy_data$PC2, to = c(0, 1))
+italy_data$PC3_norm <- rescale(italy_data$PC3, to = c(0, 1))
+
+# Replace NA values with 0 after scaling
+italy_data$PC1_norm[is.na(italy_data$PC1_norm)] <- 0
+italy_data$PC2_norm[is.na(italy_data$PC2_norm)] <- 0
+italy_data$PC3_norm[is.na(italy_data$PC3_norm)] <- 0
+
+# Create an RGB color
+italy_data$color <- rgb(italy_data$PC1_norm, italy_data$PC2_norm, italy_data$PC3_norm)
+
+italy_data$color[is.na(italy_data$PC1) | is.na(italy_data$PC2) | is.na(italy_data$PC3)] <- "#FFFFFF"
+map_title_rgb <- paste("Geographical Distribution of PC Scores as RGB Colors  - All data")
+# Plot the map
+rgb_map<-ggplot(italy_data, aes(x = long, y = lat, group = group, fill = color)) +
+    geom_polygon(color = "black") +
+    scale_fill_identity() +
+    coord_map() +
+    theme_minimal() +
+    labs(title = map_title_rgb, 
+         fill = "RGB Color") +
+    theme(legend.position = "right",
+          axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+
+rgb_map->v[[length(v) + 1]] 
+print(rgb_map)
+
+
+
+```
+
+
+## Loading Analysis
+```{r  results='asis'}
+l
+#k
+#m
+#v
+```
+
